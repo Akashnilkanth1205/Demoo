@@ -31,15 +31,16 @@ interface AppNavigationState {
   appPages: IAppPage[]
   currentPageScriptHash: string
   navSections: string[]
+  queryParams?: string
 }
 
 export type MaybeStateUpdate =
   | [Partial<AppNavigationState>, () => void]
   | undefined
 export type PageUrlUpdateCallback = (
-  mainPageName: string,
-  newPageName: string,
-  isViewingMainPage: boolean
+  mainPageName?: string,
+  newPageName?: string,
+  queryString?: string
 ) => void
 export type PageNotFoundCallback = (pageName?: string) => void
 export type SetIconCallback = (icon: string) => void
@@ -88,7 +89,10 @@ export class StrategyV1 {
 
     const isViewingMainPage =
       mainPage.pageScriptHash === this.currentPageScriptHash
-    this.appNav.onUpdatePageUrl(mainPageName, newPageName, isViewingMainPage)
+
+    const queryString = newSession.queryString
+    this.appNav.newQueryString = queryString
+    this.appNav.onUpdatePageUrl(mainPageName, newPageName, queryString)
 
     // Set the title to its default value
     document.title = getTitle(newPageName ?? "")
@@ -202,7 +206,13 @@ export class StrategyV2 {
     // We do not know the page name, so use an empty string version
     document.title = getTitle("")
 
-    return [{ hideSidebarNav: this.hideSidebarNav ?? false }, () => {}]
+    return [
+      {
+        hideSidebarNav: this.hideSidebarNav ?? false,
+        queryParams: newSession.queryString ?? "",
+      },
+      () => {},
+    ]
   }
 
   handlePagesChanged(_pagesChangedMsg: PagesChanged): MaybeStateUpdate {
@@ -253,11 +263,8 @@ export class StrategyV2 {
       this.appNav.onPageIconChange(currentPage.icon)
     }
 
-    this.appNav.onUpdatePageUrl(
-      mainPage.urlPathname ?? "",
-      currentPageName,
-      currentPage.isDefault ?? false
-    )
+    // TODO for some reason
+    this.appNav.onUpdatePageUrl(mainPage.urlPathname ?? "", currentPageName)
 
     return [
       {
@@ -316,6 +323,8 @@ export class AppNavigation {
 
   isPageIconSet: boolean
 
+  newQueryString: string
+
   strategy: StrategyV1 | StrategyV2
 
   constructor(
@@ -330,6 +339,7 @@ export class AppNavigation {
     this.onPageIconChange = onPageIconChange
     this.isPageIconSet = false
     this.isPageTitleSet = false
+    this.newQueryString = ""
 
     // Start with the V1 strategy as it will apply to V0 as well
     this.strategy = new StrategyV1(this)
