@@ -16,11 +16,11 @@
 
 import React from "react"
 
-import { render, mockSessionInfo } from "@streamlit/lib"
-import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
-
 import "@testing-library/jest-dom"
 import { fireEvent, screen } from "@testing-library/react"
+
+import { mockSessionInfo, render } from "@streamlit/lib"
+import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
 import ToolbarActions, {
   ActionButton,
@@ -86,7 +86,7 @@ describe("ToolbarActions", () => {
     const props = getProps()
     render(<ToolbarActions {...props} />)
 
-    const favoriteButton = screen.getAllByTestId("baseButton-header")[0]
+    const favoriteButton = screen.getAllByTestId("stBaseButton-header")[0]
     fireEvent.click(favoriteButton)
     expect(props.sendMessageToHost).toHaveBeenLastCalledWith({
       type: "TOOLBAR_ITEM_CALLBACK",

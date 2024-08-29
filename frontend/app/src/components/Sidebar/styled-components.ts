@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-import { transparentize } from "color2k"
 import styled from "@emotion/styled"
+import { transparentize } from "color2k"
+
+import { StyledMaterialIcon } from "@streamlit/lib/src/components/shared/Icon/Material/styled-components"
 import {
   getWrappedHeadersStyle,
   hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme/utils"
-import { StyledMaterialIcon } from "@streamlit/lib/src/components/shared/Icon/Material/styled-components"
 
 // Check for custom text color & handle colors in SidebarNav accordingly
 const conditionalCustomColor = (
@@ -243,7 +244,7 @@ export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "start",
-  padding: `${theme.spacing.xl} ${theme.spacing.twoXL} ${theme.spacing.twoXL} ${theme.spacing.twoXL}`,
+  padding: `1.375rem ${theme.spacing.twoXL} ${theme.spacing.twoXL} ${theme.spacing.twoXL}`,
 }))
 
 export const StyledLogoLink = styled.a(({}) => ({
@@ -252,35 +253,57 @@ export const StyledLogoLink = styled.a(({}) => ({
   },
 }))
 
-export const StyledLogo = styled.img(({ theme }) => ({
-  height: "1.5rem",
-  maxWidth: "15rem",
-  margin: "0.25rem 0.5rem 0.25rem 0",
-  zIndex: theme.zIndices.header,
-}))
+export interface StyledLogoProps {
+  size: string
+  sidebarWidth?: string
+}
 
-export const StyledNoLogoSpacer = styled.div(({}) => ({
-  height: "2.0rem",
+function translateLogoHeight(theme: any, size: string): string {
+  if (size === "small") {
+    return theme.sizes.smallLogoHeight
+  } else if (size === "large") {
+    return theme.sizes.largeLogoHeight
+  }
+  // Default logo size
+  return theme.sizes.defaultLogoHeight
+}
+
+export const StyledLogo = styled.img<StyledLogoProps>(
+  ({ theme, size, sidebarWidth }) => ({
+    height: translateLogoHeight(theme, size),
+    // Extra margin to align small logo with sidebar collapse arrow
+    marginTop: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+    marginBottom: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+    marginRight: theme.spacing.sm,
+    marginLeft: theme.spacing.none,
+    zIndex: theme.zIndices.header,
+
+    ...(sidebarWidth && {
+      // Control max width of logo so sidebar collapse button always shows (issue #8707)
+      // L & R padding (3rem) + R margin (.5rem) + collapse button (2.25rem) = 5.75rem
+      maxWidth: `calc(${sidebarWidth}px - 5.75rem)`,
+    }),
+  })
+)
+
+export const StyledNoLogoSpacer = styled.div(({ theme }) => ({
+  height: theme.sizes.largeLogoHeight,
 }))
 
 export interface StyledSidebarOpenContainerProps {
   chevronDownshift: number
-  isCollapsed: boolean
 }
 
 export const StyledSidebarOpenContainer =
   styled.div<StyledSidebarOpenContainerProps>(
-    ({ theme, chevronDownshift, isCollapsed }) => ({
+    ({ theme, chevronDownshift }) => ({
       position: "fixed",
       top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.xl,
-      left: isCollapsed ? theme.spacing.twoXL : `-${theme.spacing.twoXL}`,
+      left: theme.spacing.twoXL,
       zIndex: theme.zIndices.header,
       display: "flex",
       justifyContent: "center",
-      alignItems: "start",
-
-      transition: "left 300ms",
-      transitionDelay: "left 300ms",
+      alignItems: "center",
 
       [`@media print`]: {
         position: "static",
@@ -298,6 +321,7 @@ export const StyledOpenSidebarButton = styled.div(({ theme }) => {
   return {
     zIndex: theme.zIndices.header,
     color,
+    marginTop: theme.spacing.twoXS,
 
     button: {
       "&:hover": {
@@ -392,5 +416,5 @@ export const StyledViewButton = styled.button(({ theme }) => {
 
 export const StyledSidebarNavSeparator = styled.div(({ theme }) => ({
   paddingTop: theme.spacing.lg,
-  borderBottom: `1px solid ${theme.colors.fadedText10}`,
+  borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
 }))

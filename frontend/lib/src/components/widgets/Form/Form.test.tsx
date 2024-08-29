@@ -15,11 +15,14 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
+
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+
 import { Form, Props } from "./Form"
 
 describe("Form", () => {
@@ -40,7 +43,9 @@ describe("Form", () => {
   }
   it("renders without crashing", () => {
     render(<Form {...getProps()} />)
-    expect(screen.getByTestId("stForm")).toBeInTheDocument()
+    const formElement = screen.getByTestId("stForm")
+    expect(formElement).toBeInTheDocument()
+    expect(formElement).toHaveClass("stForm")
   })
 
   it("shows error if !hasSubmitButton && scriptRunState==NOT_RUNNING", () => {

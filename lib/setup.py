@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.36.0"  # PEP-440
+VERSION = "1.38.0"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
@@ -46,7 +46,7 @@ INSTALL_REQUIRES = [
     "pyarrow>=7.0",
     "requests>=2.27, <3",
     "rich>=10.14.0, <14",
-    "tenacity>=8.1.0, <9",
+    "tenacity>=8.1.0, <10",
     "toml>=0.10.1, <2",
     "typing-extensions>=4.3.0, <5",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
@@ -71,7 +71,7 @@ if not os.getenv("SNOWPARK_CONDA_BUILD"):
 
 EXTRA_REQUIRES = {
     "snowflake": [
-        "snowflake-snowpark-python>=0.9.0; python_version<'3.12'",
+        "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
         "snowflake-connector-python>=2.8.0; python_version<'3.12'",
     ]
 }

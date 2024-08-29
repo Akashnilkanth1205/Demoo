@@ -15,25 +15,27 @@
  */
 
 import React from "react"
+
 import { isMobile } from "react-device-detect"
 import without from "lodash/without"
 import { withTheme } from "@emotion/react"
-import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
-import {
-  WidgetStateManager,
-  Source,
-} from "@streamlit/lib/src/WidgetStateManager"
-import { MultiSelect as MultiSelectProto } from "@streamlit/lib/src/proto"
 import { ChevronDown } from "baseui/icon"
 import {
+  OnChangeParams,
+  Option,
   TYPE,
   Select as UISelect,
-  Option,
-  OnChangeParams,
 } from "baseui/select"
+
+import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
-  WidgetLabel,
+  Source,
+  WidgetStateManager,
+} from "@streamlit/lib/src/WidgetStateManager"
+import { MultiSelect as MultiSelectProto } from "@streamlit/lib/src/proto"
+import {
   StyledWidgetLabelHelp,
+  WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import { StyledUISelect } from "@streamlit/lib/src/components/widgets/Multiselect/styled-components"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
@@ -242,11 +244,7 @@ class Multiselect extends React.PureComponent<Props, State> {
     const showKeyboardOnMobile = options.length > 10
 
     return (
-      <div
-        className="row-widget stMultiSelect"
-        data-testid="stMultiSelect"
-        style={style}
-      >
+      <div className="stMultiSelect" data-testid="stMultiSelect" style={style}>
         <WidgetLabel
           label={element.label}
           disabled={disabled}
@@ -282,7 +280,6 @@ class Multiselect extends React.PureComponent<Props, State> {
             overrides={{
               SelectArrow: {
                 component: ChevronDown,
-
                 props: {
                   overrides: {
                     Svg: {
@@ -318,9 +315,9 @@ class Multiselect extends React.PureComponent<Props, State> {
               ValueContainer: {
                 style: () => ({
                   paddingLeft: theme.spacing.sm,
-                  paddingTop: 0,
-                  paddingBottom: 0,
-                  paddingRight: 0,
+                  paddingTop: theme.spacing.none,
+                  paddingBottom: theme.spacing.none,
+                  paddingRight: theme.spacing.none,
                 }),
               },
               ClearIcon: {
@@ -359,9 +356,10 @@ class Multiselect extends React.PureComponent<Props, State> {
                         borderBottomLeftRadius: theme.radii.md,
                         fontSize: theme.fontSizes.sm,
                         paddingLeft: theme.spacing.sm,
-                        marginLeft: 0,
+                        marginLeft: theme.spacing.none,
                         marginRight: theme.spacing.sm,
                         height: "28px",
+                        maxWidth: `calc(100% - ${theme.spacing.lg})`,
                       },
                     },
                     Action: {

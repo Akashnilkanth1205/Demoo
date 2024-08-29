@@ -15,15 +15,17 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
-import { screen, fireEvent, within } from "@testing-library/react"
+import { fireEvent, screen, within } from "@testing-library/react"
+
 import {
+  CustomThemeConfig,
   darkTheme,
+  fonts,
+  LibContextProps,
   lightTheme,
   toThemeInput,
-  fonts,
-  CustomThemeConfig,
-  LibContextProps,
 } from "@streamlit/lib"
 import { customRenderLibContext } from "@streamlit/lib/src/test_util"
 
@@ -176,7 +178,7 @@ describe("Opened ThemeCreatorDialog", () => {
     expect(themeColorPickers).toHaveLength(4)
 
     const primaryColorPicker = within(themeColorPickers[0]).getByTestId(
-      "stColorBlock"
+      "stColorPickerBlock"
     )
     fireEvent.click(primaryColorPicker)
 

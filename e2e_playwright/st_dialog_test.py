@@ -12,13 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import COMMAND_KEY, get_markdown
+from e2e_playwright.shared.app_utils import (
+    COMMAND_KEY,
+    check_top_level_class,
+    get_button,
+    get_markdown,
+)
 
-modal_test_id = "stModal"
+modal_test_id = "stDialog"
 
 
 def open_dialog_with_images(app: Page):
@@ -59,6 +66,12 @@ def open_dialog_with_copy_buttons(app: Page):
     app.get_by_role("button").filter(has_text="Open Dialog with Copy Buttons").click()
 
 
+def open_dialog_with_deprecation_warning(app: Page):
+    app.get_by_role("button").filter(
+        has_text="Open Dialog with deprecation warning"
+    ).click()
+
+
 def click_to_dismiss(app: Page):
     # Click somewhere outside the close popover container:
     app.keyboard.press("Escape")
@@ -70,6 +83,10 @@ def test_displays_dialog_properly(app: Page):
     wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
+
+    # Verify that we don't print a deprecation warning for usage of @st.dialog. We check
+    # that a warning is printed for @st.experimental_dialog in a later test.
+    expect(app.get_by_test_id("stAlert")).not_to_be_attached()
 
 
 def test_dialog_closes_properly(app: Page):
@@ -205,9 +222,8 @@ def test_dialog_displays_correctly(app: Page, assert_snapshot: ImageCompareFunct
     # click on the dialog title to take away focus of all elements and make the
     # screenshot stable. Then hover over the button for visual effect.
     dialog.locator("div", has_text="Simple Dialog").click()
-    submit_button = dialog.get_by_test_id("stButton")
-    expect(submit_button).to_be_visible()
-    submit_button.get_by_test_id("baseButton-secondary").hover()
+    submit_button = get_button(dialog, "Submit")
+    submit_button.hover()
     assert_snapshot(dialog, name="st_dialog-default")
 
 
@@ -220,9 +236,8 @@ def test_largewidth_dialog_displays_correctly(
     # click on the dialog title to take away focus of all elements and make the
     # screenshot stable. Then hover over the button for visual effect.
     dialog.locator("div", has_text="Large-width Dialog").click()
-    submit_button = dialog.get_by_test_id("stButton")
-    expect(submit_button).to_be_visible()
-    submit_button.get_by_test_id("baseButton-secondary").hover()
+    submit_button = get_button(dialog, "Submit")
+    submit_button.hover()
     assert_snapshot(dialog, name="st_dialog-with_large_width")
 
 
@@ -248,11 +263,8 @@ def test_sidebar_dialog_displays_correctly(
     open_sidebar_dialog(app)
     wait_for_app_run(app, wait_delay=200)
     dialog = app.get_by_role("dialog")
-    submit_button = dialog.get_by_test_id("stButton")
-    expect(submit_button).to_be_visible()
-    # ensure focus of the button to avoid flakiness where sometimes snapshots are made
-    # when the button is not in focus
-    submit_button.get_by_test_id("baseButton-secondary").hover()
+    submit_button = get_button(dialog, "Submit")
+    submit_button.hover()
     assert_snapshot(dialog, name="st_dialog-in_sidebar")
 
 
@@ -276,9 +288,8 @@ def test_dialogs_have_different_fragment_ids(app: Page):
     wait_for_app_run(app)
     large_width_dialog_fragment_id = get_markdown(app, "Fragment Id:").text_content()
     dialog = app.get_by_role("dialog")
-    submit_button = dialog.get_by_test_id("stButton")
-    expect(submit_button).to_be_visible()
-    submit_button.get_by_test_id("baseButton-secondary").click()
+    submit_button = get_button(dialog, "Submit")
+    submit_button.click()
     wait_for_app_run(app)
 
     open_nested_dialogs(app)
@@ -295,9 +306,9 @@ def test_dialogs_have_different_fragment_ids(app: Page):
     open_submit_button_dialog(app)
     wait_for_app_run(app)
     dialog = app.get_by_role("dialog")
-    submit_button = dialog.get_by_test_id("stButton")
-    expect(submit_button).to_be_visible()
-    submit_button.get_by_test_id("baseButton-secondary").click()
+
+    submit_button = get_button(dialog, "Submit")
+    submit_button.click()
     wait_for_app_run(app)
 
     exception_message = app.get_by_test_id("stException")
@@ -332,3 +343,22 @@ def test_dialog_copy_buttons_work(app: Page):
 
     # we should see the pasted content written to the dialog
     expect(app.get_by_test_id("stMarkdown")).to_have_text("[1,2,3]")
+
+
+def test_experimental_dialog_deprecation_warning(app: Page):
+    """Test that using @st.experimental_dialog instead of @st.dialog results in a
+    deprecation warning being displayed in the dialog.
+    """
+    expect(app.get_by_test_id("stAlert")).not_to_be_attached()
+
+    open_dialog_with_deprecation_warning(app)
+
+    expect(app.get_by_test_id("stAlert")).to_have_text(
+        re.compile("Please replace st.experimental_dialog with st.dialog.\n.*")
+    )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    open_dialog_with_images(app)
+    check_top_level_class(app, "stDialog")

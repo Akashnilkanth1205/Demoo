@@ -15,6 +15,7 @@
  */
 
 import styled, { CSSObject } from "@emotion/styled"
+
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export interface StyledFileDropzone {
@@ -71,9 +72,9 @@ export const StyledUploadedFiles = styled.div(({ theme }) => ({
   paddingRight: theme.spacing.lg,
 }))
 
-export const StyledUploadedFilesList = styled.ul(() => ({
+export const StyledUploadedFilesList = styled.ul(({ theme }) => ({
   listStyleType: "none",
-  marginBottom: 0,
+  marginBottom: theme.spacing.none,
 }))
 
 export const StyledUploadedFilesListItem = styled.li(({ theme }) => ({

@@ -15,22 +15,23 @@
  */
 
 import React, { ReactElement } from "react"
+
 import {
-  DataEditor as GlideDataEditor,
+  CompactSelection,
   DataEditorRef,
-  GridSelection,
-  GridMouseEventArgs,
+  DataEditor as GlideDataEditor,
   GridCell,
   Item as GridCellPosition,
-  CompactSelection,
+  GridMouseEventArgs,
+  GridSelection,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
 import {
-  Delete,
   Add,
+  Close,
+  Delete,
   FileDownload,
   Search,
-  Close,
 } from "@emotion-icons/material-outlined"
 
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
@@ -49,30 +50,30 @@ import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 import EditingState, { getColumnName } from "./EditingState"
 import {
-  useCustomTheme,
-  useTableSizer,
-  useDataLoader,
-  useDataEditor,
+  useColumnLoader,
   useColumnSizer,
   useColumnSort,
-  useColumnLoader,
-  useTooltips,
   useCustomRenderer,
+  useCustomTheme,
+  useDataEditor,
   useDataExporter,
+  useDataLoader,
   useSelectionHandler,
+  useTableSizer,
+  useTooltips,
 } from "./hooks"
 import {
   BORDER_THRESHOLD,
-  MIN_COLUMN_WIDTH,
-  MAX_COLUMN_WIDTH,
   MAX_COLUMN_AUTO_WIDTH,
+  MAX_COLUMN_WIDTH,
+  MIN_COLUMN_WIDTH,
   ROW_HEIGHT,
 } from "./hooks/useTableSizer"
 import {
   BaseColumn,
-  toGlideColumn,
   getTextCell,
   ImageCellEditor,
+  toGlideColumn,
 } from "./columns"
 import Tooltip from "./Tooltip"
 import { StyledResizableContainer } from "./styled-components"
@@ -615,8 +616,8 @@ function DataFrame({
 
   return (
     <StyledResizableContainer
-      data-testid="stDataFrame"
       className="stDataFrame"
+      data-testid="stDataFrame"
       hasCustomizedScrollbars={hasCustomizedScrollbars}
       ref={resizableContainerRef}
       onMouseDown={e => {
@@ -683,7 +684,7 @@ function DataFrame({
           // are not relevant since they are not synced to the backend
           // at the moment.
           <ToolbarAction
-            label={"Clear selection"}
+            label="Clear selection"
             icon={Close}
             onClick={() => {
               clearSelection()
@@ -693,7 +694,7 @@ function DataFrame({
         )}
         {isDynamicAndEditable && isRowSelected && (
           <ToolbarAction
-            label={"Delete row(s)"}
+            label="Delete row(s)"
             icon={Delete}
             onClick={() => {
               if (onDelete) {
@@ -705,7 +706,7 @@ function DataFrame({
         )}
         {isDynamicAndEditable && !isRowSelected && (
           <ToolbarAction
-            label={"Add row"}
+            label="Add row"
             icon={Add}
             onClick={() => {
               if (onRowAppended) {
@@ -718,14 +719,14 @@ function DataFrame({
         )}
         {!isLargeTable && !isEmptyTable && (
           <ToolbarAction
-            label={"Download as CSV"}
+            label="Download as CSV"
             icon={FileDownload}
             onClick={() => exportToCsv()}
           />
         )}
         {!isEmptyTable && (
           <ToolbarAction
-            label={"Search"}
+            label="Search"
             icon={Search}
             onClick={() => {
               if (!showSearch) {
@@ -780,7 +781,9 @@ function DataFrame({
         }}
       >
         <GlideDataEditor
-          className="glideDataEditor"
+          // The className is used in styled components:
+          className="stDataFrameGlideDataEditor"
+          data-testid="stDataFrameGlideDataEditor"
           ref={dataEditorRef}
           columns={glideColumns}
           rows={isEmptyTable ? 1 : numRows}

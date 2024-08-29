@@ -13,7 +13,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash --login -eo pipefail {0}
+        shell: bash
 
     permissions:
       # Additional permission needed to generate tag
@@ -75,7 +75,8 @@ jobs:
     with:
       ref: ${{needs.create-nightly-tag.outputs.tag}}
     secrets:
-      PARAMETER_PASSWORD: ${{ secrets.PARAMETER_PASSWORD }}
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
 
   run-javascript-tests:
     needs: create-nightly-tag
@@ -142,7 +143,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash --login -eo pipefail {0}
+        shell: bash
 
     outputs:
       enable-setup: ${{ steps.exports.outputs.enable-setup }}
@@ -227,7 +228,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash --login -eo pipefail {0}
+        shell: bash
 
     steps:
       - name: Checkout Core Previews Repo

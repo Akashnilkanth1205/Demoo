@@ -15,21 +15,23 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import {
-  screen,
   fireEvent,
-  within,
   RenderResult,
+  screen,
+  within,
 } from "@testing-library/react"
 
 import {
-  render,
-  mockEndpoints,
   emotionLightTheme,
-  PageConfig,
   Logo,
+  mockEndpoints,
+  PageConfig,
+  render,
 } from "@streamlit/lib"
+
 import Sidebar, { SidebarProps } from "./Sidebar"
 
 jest.mock("@streamlit/lib/src/util/Hooks", () => ({
@@ -99,7 +101,10 @@ describe("Sidebar Component", () => {
 
     // Click the close sidebar <
     fireEvent.mouseOver(screen.getByTestId("stSidebarHeader"))
-    fireEvent.click(screen.getByRole("button"))
+    const sidebarCollapseButton = within(
+      screen.getByTestId("stSidebarCollapseButton")
+    ).getByRole("button")
+    fireEvent.click(sidebarCollapseButton)
 
     expect(screen.getByTestId("stSidebar")).toHaveAttribute(
       "aria-expanded",
@@ -119,7 +124,7 @@ describe("Sidebar Component", () => {
 
     // Click the expand sidebar > button
     const expandButton = within(
-      screen.getByTestId("collapsedControl")
+      screen.getByTestId("stSidebarCollapsedControl")
     ).getByRole("button")
     fireEvent.click(expandButton)
 
@@ -127,14 +132,6 @@ describe("Sidebar Component", () => {
       "aria-expanded",
       "true"
     )
-  })
-
-  it("chevron does not render if sidebar expanded", () => {
-    renderSidebar({
-      initialSidebarState: PageConfig.SidebarState.EXPANDED,
-    })
-
-    expect(screen.queryByTestId("collapsedControl")).not.toBeInTheDocument()
   })
 
   it("shows/hides the collapse arrow when hovering over top of sidebar", () => {
@@ -188,7 +185,9 @@ describe("Sidebar Component", () => {
       initialSidebarState: PageConfig.SidebarState.COLLAPSED,
     })
 
-    expect(screen.getByTestId("collapsedControl")).toHaveStyle("top: 1.25rem")
+    expect(screen.getByTestId("stSidebarCollapsedControl")).toHaveStyle(
+      "top: 1.25rem"
+    )
   })
 
   it("uses the given chevron spacing if chevronDownshift is nonzero", () => {
@@ -197,7 +196,9 @@ describe("Sidebar Component", () => {
       initialSidebarState: PageConfig.SidebarState.COLLAPSED,
     })
 
-    expect(screen.getByTestId("collapsedControl")).toHaveStyle("top: 50px")
+    expect(screen.getByTestId("stSidebarCollapsedControl")).toHaveStyle(
+      "top: 50px"
+    )
   })
 
   it("renders SidebarNav component", () => {
@@ -244,9 +245,20 @@ describe("Sidebar Component", () => {
       iconImage: "https://docs.streamlit.io/logo.svg",
     })
 
+    const logoWithSize = Logo.create({
+      image:
+        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+      link: "www.example.com",
+      iconImage: "https://docs.streamlit.io/logo.svg",
+      size: "small",
+    })
+
     it("renders spacer if no logo provided", () => {
       renderSidebar({ appLogo: null })
-      expect(screen.getByTestId("stLogoSpacer")).toBeInTheDocument()
+      const sidebarLogoSpacer = within(
+        screen.getByTestId("stSidebar")
+      ).getByTestId("stLogoSpacer")
+      expect(sidebarLogoSpacer).toBeInTheDocument()
     })
 
     it("renders logo when sidebar collapsed - uses iconImage if provided", () => {
@@ -255,7 +267,9 @@ describe("Sidebar Component", () => {
         initialSidebarState: PageConfig.SidebarState.COLLAPSED,
         appLogo: fullAppLogo,
       })
-      const openSidebarContainer = screen.getByTestId("collapsedControl")
+      const openSidebarContainer = screen.getByTestId(
+        "stSidebarCollapsedControl"
+      )
       expect(openSidebarContainer).toBeInTheDocument()
       const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
       expect(collapsedLogo).toBeInTheDocument()
@@ -270,7 +284,9 @@ describe("Sidebar Component", () => {
         initialSidebarState: PageConfig.SidebarState.COLLAPSED,
         appLogo: imageOnly,
       })
-      const openSidebarContainer = screen.getByTestId("collapsedControl")
+      const openSidebarContainer = screen.getByTestId(
+        "stSidebarCollapsedControl"
+      )
       expect(openSidebarContainer).toBeInTheDocument()
       const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
       expect(collapsedLogo).toBeInTheDocument()
@@ -291,19 +307,49 @@ describe("Sidebar Component", () => {
       )
     })
 
-    it("renders logo - default image has no link", () => {
+    it("renders logo - default image has no link & medium size", () => {
       renderSidebar({ appLogo: imageOnly })
-      expect(screen.queryByTestId("stLogoLink")).not.toBeInTheDocument()
-      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+      const sidebarLogoLink = within(
+        screen.getByTestId("stSidebar")
+      ).queryByTestId("stLogoLink")
+      expect(sidebarLogoLink).not.toBeInTheDocument()
+      const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
+        "stLogo"
+      )
+      expect(sidebarLogo).toHaveStyle({ height: "1.5rem" })
     })
 
     it("renders logo - image has link if provided", () => {
       renderSidebar({ appLogo: imageWithLink })
-      expect(screen.getByTestId("stLogoLink")).toHaveAttribute(
-        "href",
-        "www.example.com"
+      const sidebarLogoLink = within(
+        screen.getByTestId("stSidebar")
+      ).getByTestId("stLogoLink")
+      expect(sidebarLogoLink).toHaveAttribute("href", "www.example.com")
+      const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
+        "stLogo"
       )
-      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+      expect(sidebarLogo).toHaveStyle({ height: "1.5rem" })
+    })
+
+    it("renders logo - small size when specified", () => {
+      renderSidebar({ appLogo: logoWithSize })
+      const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
+        "stLogo"
+      )
+      expect(sidebarLogo).toHaveStyle({ height: "1.25rem" })
+    })
+
+    it("sets maxWidth of logo based on sidebar width", () => {
+      renderSidebar({ appLogo: imageWithLink })
+      const sidebarWidth = window.getComputedStyle(
+        screen.getByTestId("stSidebar")
+      ).width
+      const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
+        "stLogo"
+      )
+      expect(sidebarLogo).toHaveStyle(
+        `max-width: calc(${sidebarWidth} - 5.75rem)`
+      )
     })
   })
 })

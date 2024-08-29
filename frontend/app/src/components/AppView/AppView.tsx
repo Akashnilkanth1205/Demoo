@@ -17,43 +17,41 @@
 import React, { ReactElement } from "react"
 
 import {
-  IAppPage,
-  VerticalBlock,
-  ScriptRunState,
-  FormsData,
-  WidgetStateManager,
-  FileUploadClient,
-  ComponentRegistry,
-  BlockNode,
   AppRoot,
-  SessionInfo,
+  BlockNode,
+  ComponentRegistry,
+  FileUploadClient,
+  FormsData,
+  IAppPage,
   IGuestToHostMessage,
-  StreamlitEndpoints,
   LibContext,
   Logo,
+  ScriptRunState,
+  SessionInfo,
+  StreamlitEndpoints,
+  VerticalBlock,
+  WidgetStateManager,
 } from "@streamlit/lib"
-
 import { ThemedSidebar } from "@streamlit/app/src/components/Sidebar"
 import EventContainer from "@streamlit/app/src/components/EventContainer"
 import {
-  StyledSidebarOpenContainer,
   StyledLogo,
   StyledLogoLink,
+  StyledSidebarOpenContainer,
 } from "@streamlit/app/src/components/Sidebar/styled-components"
-
 import { AppContext } from "@streamlit/app/src/components/AppContext"
 
 import {
   StyledAppViewBlockContainer,
+  StyledAppViewBlockSpacer,
   StyledAppViewContainer,
   StyledAppViewMain,
-  StyledIFrameResizerAnchor,
-  StyledEventBlockContainer,
-  StyledInnerBottomContainer,
-  StyledStickyBottomContainer,
-  StyledAppViewBlockSpacer,
-  StyledSidebarBlockContainer,
   StyledBottomBlockContainer,
+  StyledEventBlockContainer,
+  StyledIFrameResizerAnchor,
+  StyledInnerBottomContainer,
+  StyledSidebarBlockContainer,
+  StyledStickyBottomContainer,
 } from "./styled-components"
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
 
@@ -185,6 +183,15 @@ function AppView(props: AppViewProps): ReactElement {
     const displayImage = appLogo.iconImage ? appLogo.iconImage : appLogo.image
     const source = endpoints.buildMediaURL(displayImage)
 
+    const logo = (
+      <StyledLogo
+        src={source}
+        size={appLogo.size}
+        alt="Logo"
+        data-testid="stLogo"
+      />
+    )
+
     if (appLogo.link) {
       return (
         <StyledLogoLink
@@ -193,11 +200,11 @@ function AppView(props: AppViewProps): ReactElement {
           rel="noreferrer"
           data-testid="stLogoLink"
         >
-          <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
+          {logo}
         </StyledLogoLink>
       )
     }
-    return <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
+    return logo
   }
 
   // Activate scroll to bottom whenever there are bottom elements:
@@ -223,7 +230,7 @@ function AppView(props: AppViewProps): ReactElement {
   // The tabindex is required to support scrolling by arrow keys.
   return (
     <StyledAppViewContainer
-      className="appview-container"
+      className="stAppViewContainer appview-container"
       data-testid="stAppViewContainer"
       data-layout={layout}
     >
@@ -247,8 +254,7 @@ function AppView(props: AppViewProps): ReactElement {
       {!showSidebar && appLogo && (
         <StyledSidebarOpenContainer
           chevronDownshift={sidebarChevronDownshift}
-          isCollapsed={true}
-          data-testid="collapsedControl"
+          data-testid="stSidebarCollapsedControl"
         >
           {renderLogo(appLogo)}
         </StyledSidebarOpenContainer>
@@ -257,10 +263,10 @@ function AppView(props: AppViewProps): ReactElement {
         tabIndex={0}
         isEmbedded={embedded}
         disableScrolling={disableScrolling}
-        className="main"
+        className="stAppViewMain main"
       >
         <StyledAppViewBlockContainer
-          className="block-container"
+          className="stAppViewBlockContainer block-container"
           data-testid="stAppViewBlockContainer"
           isWideMode={wideMode}
           showPadding={showPadding}

@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { screen, fireEvent } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -75,7 +75,6 @@ describe("Checkbox widget", () => {
     render(<Checkbox {...props} />)
     const checkboxElement = screen.getByTestId("stCheckbox")
 
-    expect(checkboxElement).toHaveClass("row-widget")
     expect(checkboxElement).toHaveClass("stCheckbox")
     expect(checkboxElement).toHaveStyle(`width: ${props.width}px`)
   })

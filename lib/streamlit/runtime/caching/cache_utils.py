@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import functools
 import hashlib
 import inspect
@@ -125,12 +126,10 @@ class CachedFuncInfo:
         self,
         func: FunctionType,
         show_spinner: bool | str,
-        allow_widgets: bool,
         hash_funcs: HashFuncsDict | None,
     ):
         self.func = func
         self.show_spinner = show_spinner
-        self.allow_widgets = allow_widgets
         self.hash_funcs = hash_funcs
 
     @property
@@ -230,11 +229,9 @@ class CachedFunc:
             hash_funcs=self._info.hash_funcs,
         )
 
-        try:
+        with contextlib.suppress(CacheKeyNotFoundError):
             cached_result = cache.read_result(value_key)
             return self._handle_cache_hit(cached_result)
-        except CacheKeyNotFoundError:
-            pass
         return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
 
     def _handle_cache_hit(self, result: CachedResult) -> Any:
@@ -279,17 +276,14 @@ class CachedFunc:
             # We've acquired the lock - but another thread may have acquired it first
             # and already computed the value. So we need to test for a cache hit again,
             # before computing.
-            try:
+            with contextlib.suppress(CacheKeyNotFoundError):
                 cached_result = cache.read_result(value_key)
                 # Another thread computed the value before us. Early exit!
                 return self._handle_cache_hit(cached_result)
 
-            except CacheKeyNotFoundError:
-                pass
-
             # We acquired the lock before any other thread. Compute the value!
             with self._info.cached_message_replay_ctx.calling_cached_function(
-                self._info.func, self._info.allow_widgets
+                self._info.func
             ):
                 computed_value = self._info.func(*func_args, **func_kwargs)
 
@@ -299,20 +293,23 @@ class CachedFunc:
             try:
                 cache.write_result(value_key, computed_value, messages)
                 return computed_value
-            except (CacheError, RuntimeError):
-                # An exception was thrown while we tried to write to the cache. Report it to the user.
-                # (We catch `RuntimeError` here because it will be raised by Apache Spark if we do not
-                # collect dataframe before using `st.cache_data`.)
+            except (CacheError, RuntimeError) as ex:
+                # An exception was thrown while we tried to write to the cache. Report
+                # it to the user. (We catch `RuntimeError` here because it will be
+                # raised by Apache Spark if we do not collect dataframe before
+                # using `st.cache_data`.)
                 if is_unevaluated_data_object(computed_value):
                     # If the returned value is an unevaluated dataframe, raise an error.
                     # Unevaluated dataframes are not yet in the local memory, which also
                     # means they cannot be properly cached (serialized).
                     raise UnevaluatedDataFrameError(
-                        f"""
-                        The function {get_cached_func_name_md(self._info.func)} is decorated with `st.cache_data` but it returns an unevaluated dataframe
-                        of type `{type_util.get_fqn_type(computed_value)}`. Please call `collect()` or `to_pandas()` on the dataframe before returning it,
-                        so `st.cache_data` can serialize and cache it."""
-                    )
+                        f"The function {get_cached_func_name_md(self._info.func)} is "
+                        "decorated with `st.cache_data` but it returns an unevaluated "
+                        f"data object of type `{type_util.get_fqn_type(computed_value)}`. "
+                        "Please convert the object to a serializable format "
+                        "(e.g. Pandas DataFrame) before returning it, so "
+                        "`st.cache_data` can serialize and cache it."
+                    ) from ex
                 raise UnserializableReturnValueError(
                     return_value=computed_value, func=self._info.func
                 )
@@ -326,8 +323,10 @@ class CachedFunc:
 
         Parameters
         ----------
+
         *args: Any
             Arguments of the cached functions.
+
         **kwargs: Any
             Keyword arguments of the cached function.
 
@@ -468,8 +467,7 @@ def _make_function_key(cache_type: CacheType, func: FunctionType) -> str:
         source_code, hasher=func_hasher, cache_type=cache_type, hash_source=func
     )
 
-    cache_key = func_hasher.hexdigest()
-    return cache_key
+    return func_hasher.hexdigest()
 
 
 def _get_positional_arg_name(func: FunctionType, arg_index: int) -> str | None:

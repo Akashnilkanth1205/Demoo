@@ -15,12 +15,14 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { fireEvent, screen } from "@testing-library/react"
+
 import {
+  mockTheme,
   render,
   ScriptRunState,
-  mockTheme,
   SessionEvent,
 } from "@streamlit/lib"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
@@ -126,7 +128,7 @@ describe("StatusWidget element", () => {
     const stopScript = jest.fn()
     render(<StatusWidget {...getProps({ stopScript })} />)
 
-    fireEvent.click(screen.getByTestId("baseButton-header"))
+    fireEvent.click(screen.getByTestId("stBaseButton-header"))
 
     expect(stopScript).toHaveBeenCalled()
   })

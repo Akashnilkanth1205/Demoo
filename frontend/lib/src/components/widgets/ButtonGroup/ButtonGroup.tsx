@@ -15,17 +15,16 @@
  */
 
 import React, {
-  ReactElement,
-  useEffect,
-  useState,
   forwardRef,
+  ReactElement,
   Ref,
+  useEffect,
   useMemo,
+  useState,
 } from "react"
 
 import { useTheme } from "@emotion/react"
 import isEqual from "lodash/isEqual"
-
 import { ButtonGroup as BasewebButtonGroup, MODE } from "baseui/button-group"
 
 import BaseButton, {
@@ -34,7 +33,6 @@ import BaseButton, {
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
-
 import { ButtonGroup as ButtonGroupProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form/FormClearHelper"
@@ -271,29 +269,28 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     return <Element key={`${option.content}-${index}`} />
   })
   return (
-    <BasewebButtonGroup
-      disabled={disabled}
-      mode={mode}
-      onClick={onClick}
-      selected={
-        clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT
-          ? selected
-          : getSingleSelection(selected)
-      }
-      overrides={{
-        Root: {
-          style: {
-            flexWrap: "wrap",
-            gap: theme.spacing.threeXS,
+    <div className="stButtonGroup" data-testid="stButtonGroup">
+      <BasewebButtonGroup
+        disabled={disabled}
+        mode={mode}
+        onClick={onClick}
+        selected={
+          clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT
+            ? selected
+            : getSingleSelection(selected)
+        }
+        overrides={{
+          Root: {
+            style: {
+              flexWrap: "wrap",
+              gap: theme.spacing.threeXS,
+            },
           },
-          props: {
-            "data-testid": "stButtonGroup",
-          },
-        },
-      }}
-    >
-      {optionElements}
-    </BasewebButtonGroup>
+        }}
+      >
+        {optionElements}
+      </BasewebButtonGroup>
+    </div>
   )
 }
 

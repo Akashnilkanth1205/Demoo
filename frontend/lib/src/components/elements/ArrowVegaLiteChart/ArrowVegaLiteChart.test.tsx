@@ -15,12 +15,14 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
-import { render } from "@streamlit/lib/src/test_util"
 
+import { render } from "@streamlit/lib/src/test_util"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+
 import { ArrowVegaLiteChart, PropsWithFullScreen } from "./ArrowVegaLiteChart"
 import { VegaLiteChartElement } from "./arrowUtils"
 
@@ -72,6 +74,8 @@ const getProps = (
 describe("ArrowVegaLiteChart", () => {
   it("renders without crashing", () => {
     render(<ArrowVegaLiteChart {...getProps()} />)
-    expect(screen.getByTestId("stArrowVegaLiteChart")).toBeInTheDocument()
+    const vegaLiteChart = screen.getByTestId("stVegaLiteChart")
+    expect(vegaLiteChart).toBeInTheDocument()
+    expect(vegaLiteChart).toHaveClass("stVegaLiteChart")
   })
 })

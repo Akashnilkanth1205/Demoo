@@ -17,7 +17,8 @@
 import React from "react"
 import "@testing-library/jest-dom"
 
-import { screen, fireEvent } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
+
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
@@ -25,6 +26,7 @@ import {
   MultiSelect as MultiSelectProto,
 } from "@streamlit/lib/src/proto"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+
 import Multiselect, { Props } from "./Multiselect"
 
 const getProps = (
@@ -54,7 +56,7 @@ describe("Multiselect widget", () => {
     const props = getProps()
     render(<Multiselect {...props} />)
 
-    const multiSelect = screen.getByRole("combobox")
+    const multiSelect = screen.getByTestId("stMultiSelect")
     expect(multiSelect).toBeInTheDocument()
   })
 
@@ -93,7 +95,6 @@ describe("Multiselect widget", () => {
     render(<Multiselect {...props} />)
     const multiSelect = screen.getByTestId("stMultiSelect")
 
-    expect(multiSelect).toHaveClass("row-widget")
     expect(multiSelect).toHaveClass("stMultiSelect")
     expect(multiSelect).toHaveStyle(`width: ${props.width}px`)
   })

@@ -17,17 +17,18 @@
 import React from "react"
 import "@testing-library/jest-dom"
 
-import { screen, fireEvent, within } from "@testing-library/react"
+import { fireEvent, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-
 import {
-  TextInput as TextInputProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
+  TextInput as TextInputProto,
 } from "@streamlit/lib/src/proto"
-import TextInput, { Props } from "./TextInput"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+
+import TextInput, { Props } from "./TextInput"
 
 const getProps = (
   elementProps: Partial<TextInputProto> = {},
@@ -104,7 +105,7 @@ describe("TextInput widget", () => {
     const textInput = screen.getByRole("textbox")
     expect(textInput).toHaveAttribute("type", "text")
     // Check that no show/hide button renders
-    const textInputContainer = screen.getByTestId("stTextInput-RootElement")
+    const textInputContainer = screen.getByTestId("stTextInputRootElement")
     const showButton = within(textInputContainer).queryByRole("button")
     expect(showButton).not.toBeInTheDocument()
   })
@@ -115,7 +116,7 @@ describe("TextInput widget", () => {
     const passwordTextInput = screen.getByPlaceholderText("Placeholder")
     expect(passwordTextInput).toHaveAttribute("type", "password")
     // Check for the show/hide button
-    const textInputContainer = screen.getByTestId("stTextInput-RootElement")
+    const textInputContainer = screen.getByTestId("stTextInputRootElement")
     const showButton = within(textInputContainer).getByRole("button")
     expect(showButton).toBeInTheDocument()
   })
@@ -168,7 +169,6 @@ describe("TextInput widget", () => {
     render(<TextInput {...props} />)
     const textInput = screen.getByTestId("stTextInput")
 
-    expect(textInput).toHaveClass("row-widget")
     expect(textInput).toHaveClass("stTextInput")
     expect(textInput).toHaveStyle(`width: ${props.width}px`)
   })

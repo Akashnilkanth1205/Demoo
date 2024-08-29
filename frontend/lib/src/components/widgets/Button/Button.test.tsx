@@ -15,12 +15,14 @@
  */
 
 import React from "react"
-import { screen, fireEvent } from "@testing-library/react"
+
+import { fireEvent, screen } from "@testing-library/react"
+
 import "@testing-library/jest-dom"
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-
 import { Button as ButtonProto } from "@streamlit/lib/src/proto"
+
 import Button, { Props } from "./Button"
 
 jest.mock("@streamlit/lib/src/WidgetStateManager")
@@ -58,7 +60,6 @@ describe("Button widget", () => {
 
     const stButtonDiv = screen.getByTestId("stButton")
 
-    expect(stButtonDiv).toHaveClass("row-widget")
     expect(stButtonDiv).toHaveClass("stButton")
     expect(stButtonDiv).toHaveStyle(`width: ${props.width}px`)
   })
@@ -138,5 +139,19 @@ describe("Button widget", () => {
 
     const buttonWidget = screen.getByRole("button")
     expect(buttonWidget).toHaveStyle(`width: ${250}px`)
+  })
+
+  it("renders an emoji icon if provided", () => {
+    render(<Button {...getProps({ icon: "😀" })} />)
+
+    const icon = screen.getByTestId("stIconEmoji")
+    expect(icon).toHaveTextContent("😀")
+  })
+
+  it("renders a material icon if provided", () => {
+    render(<Button {...getProps({ icon: ":material/thumb_up:" })} />)
+
+    const icon = screen.getByTestId("stIconMaterial")
+    expect(icon).toHaveTextContent("thumb_up")
   })
 })

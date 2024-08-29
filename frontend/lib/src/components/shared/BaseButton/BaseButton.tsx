@@ -15,23 +15,24 @@
  */
 
 import React, { ReactElement } from "react"
+
 import {
-  BaseButtonProps as BaseButtonPropsT,
   BaseButtonKind,
+  BaseButtonProps as BaseButtonPropsT,
   BaseButtonSize,
   StyledBorderlessIconButton,
   StyledBorderlessIconButtonActive,
+  StyledElementToolbarButton,
+  StyledHeaderButton,
+  StyledHeaderNoPaddingButton,
   StyledIconButton,
   StyledLinkButton,
   StyledMinimalButton,
   StyledPrimaryButton,
-  StyledSecondaryButton,
-  StyledTertiaryButton,
   StyledPrimaryFormSubmitButton,
+  StyledSecondaryButton,
   StyledSecondaryFormSubmitButton,
-  StyledHeaderButton,
-  StyledHeaderNoPaddingButton,
-  StyledElementToolbarButton,
+  StyledTertiaryButton,
 } from "./styled-components"
 
 function BaseButton({
@@ -79,7 +80,7 @@ function BaseButton({
       disabled={disabled || false}
       onClick={onClick || (() => {})}
       autoFocus={autoFocus || false}
-      data-testid={`baseButton-${kind}`}
+      data-testid={`stBaseButton-${kind}`}
     >
       {children}
     </ComponentType>

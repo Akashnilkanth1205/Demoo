@@ -16,7 +16,9 @@
 
 /* eslint-disable jest/expect-expect */
 import React from "react"
-import { screen, within, fireEvent, act } from "@testing-library/react"
+
+import { act, fireEvent, screen, within } from "@testing-library/react"
+
 import "@testing-library/jest-dom"
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -86,6 +88,7 @@ describe("ButtonGroup widget", () => {
 
     const buttonGroupWidget = screen.getByTestId("stButtonGroup")
     expect(buttonGroupWidget).toBeInTheDocument()
+    expect(buttonGroupWidget).toHaveClass("stButtonGroup")
   })
 
   it("option-children with material-icon render correctly", () => {

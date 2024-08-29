@@ -15,37 +15,38 @@
  */
 
 import React, { PureComponent, ReactElement, ReactNode } from "react"
-import { ChevronRight, ChevronLeft } from "@emotion-icons/material-outlined"
+
+import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
 import { withTheme } from "@emotion/react"
 import { Resizable } from "re-resizable"
 
 import {
-  Icon,
   BaseButton,
   BaseButtonKind,
   EmotionTheme,
-  localStorageAvailable,
-  StreamlitEndpoints,
-  IsSidebarContext,
-  isEmbed,
-  isColoredLineDisplayed,
   IAppPage,
-  PageConfig,
+  Icon,
+  isColoredLineDisplayed,
+  isEmbed,
+  IsSidebarContext,
+  localStorageAvailable,
   Logo,
+  PageConfig,
+  StreamlitEndpoints,
 } from "@streamlit/lib"
 
 import {
+  StyledCollapseSidebarButton,
+  StyledLogo,
+  StyledLogoLink,
+  StyledNoLogoSpacer,
+  StyledOpenSidebarButton,
+  StyledResizeHandle,
   StyledSidebar,
   StyledSidebarContent,
-  StyledSidebarUserContent,
-  StyledResizeHandle,
   StyledSidebarHeaderContainer,
-  StyledCollapseSidebarButton,
   StyledSidebarOpenContainer,
-  StyledOpenSidebarButton,
-  StyledLogo,
-  StyledNoLogoSpacer,
-  StyledLogoLink,
+  StyledSidebarUserContent,
 } from "./styled-components"
 import SidebarNav from "./SidebarNav"
 
@@ -230,7 +231,8 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   }
 
   renderLogo(collapsed: boolean): ReactElement {
-    const { appLogo } = this.props
+    const { appLogo, endpoints } = this.props
+    const { sidebarWidth } = this.state
 
     if (!appLogo) {
       return <StyledNoLogoSpacer data-testid="stLogoSpacer" />
@@ -238,7 +240,19 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 
     const displayImage =
       collapsed && appLogo.iconImage ? appLogo.iconImage : appLogo.image
-    const source = this.props.endpoints.buildMediaURL(displayImage)
+    const source = endpoints.buildMediaURL(displayImage)
+
+    const logo = (
+      <StyledLogo
+        src={source}
+        size={appLogo.size}
+        sidebarWidth={sidebarWidth}
+        alt="Logo"
+        className="stLogo"
+        data-testid="stLogo"
+      />
+    )
+
     if (appLogo.link) {
       return (
         <StyledLogoLink
@@ -247,11 +261,11 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           rel="noreferrer"
           data-testid="stLogoLink"
         >
-          <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
+          {logo}
         </StyledLogoLink>
       )
     }
-    return <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
+    return logo
   }
 
   public render(): ReactNode {
@@ -277,24 +291,22 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     // The tabindex is required to support scrolling by arrow keys.
     return (
       <>
-        {collapsedSidebar && (
-          <StyledSidebarOpenContainer
-            chevronDownshift={chevronDownshift}
-            isCollapsed={collapsedSidebar}
-            data-testid="collapsedControl"
-          >
-            {this.renderLogo(true)}
-            <StyledOpenSidebarButton>
-              <BaseButton
-                kind={BaseButtonKind.HEADER_NO_PADDING}
-                onClick={this.toggleCollapse}
-              >
-                <Icon content={ChevronRight} size="xl" />
-              </BaseButton>
-            </StyledOpenSidebarButton>
-          </StyledSidebarOpenContainer>
-        )}
+        <StyledSidebarOpenContainer
+          chevronDownshift={chevronDownshift}
+          data-testid="stSidebarCollapsedControl"
+        >
+          {this.renderLogo(true)}
+          <StyledOpenSidebarButton>
+            <BaseButton
+              kind={BaseButtonKind.HEADER_NO_PADDING}
+              onClick={this.toggleCollapse}
+            >
+              <Icon content={ChevronRight} size="xl" />
+            </BaseButton>
+          </StyledOpenSidebarButton>
+        </StyledSidebarOpenContainer>
         <Resizable
+          className="stSidebar"
           data-testid="stSidebar"
           aria-expanded={!collapsedSidebar}
           enable={{

@@ -17,7 +17,7 @@
 import React, { ReactElement } from "react"
 
 import { useTheme } from "@emotion/react"
-import { Popover, PLACEMENT, ACCESSIBILITY_TYPE } from "baseui/popover"
+import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
 
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { StyledTooltipContentWrapper } from "@streamlit/lib/src/components/shared/Tooltip/styled-components"
@@ -68,7 +68,7 @@ function Tooltip({
   return (
     <Popover
       content={
-        <StyledTooltipContentWrapper className="stTooltipContent">
+        <StyledTooltipContentWrapper data-testid="stDataFrameTooltipContent">
           <StreamlitMarkdown
             style={{ fontSize: fontSizes.sm }}
             source={content}
@@ -89,10 +89,10 @@ function Tooltip({
             // shorthand version `borderRadius` is used here since the long
             // names are used by BaseWeb and mixing the two is apparently
             // bad :(
-            borderTopLeftRadius: radii.md,
-            borderTopRightRadius: radii.md,
-            borderBottomLeftRadius: radii.md,
-            borderBottomRightRadius: radii.md,
+            borderTopLeftRadius: radii.default,
+            borderTopRightRadius: radii.default,
+            borderBottomLeftRadius: radii.default,
+            borderBottomRightRadius: radii.default,
 
             paddingTop: "0 !important",
             paddingBottom: "0 !important",
@@ -122,8 +122,7 @@ function Tooltip({
       isOpen={open}
     >
       <div
-        className="stTooltipTarget"
-        data-testid="stTooltipTarget"
+        data-testid="stDataFrameTooltipTarget"
         style={{
           // This is an invisible div that's used to position the tooltip.
           // The position is provided from outside via the `top` and `left` properties.
