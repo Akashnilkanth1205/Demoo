@@ -747,6 +747,16 @@ _create_option(
     type_=bool,
 )
 
+_create_option(
+    "server.staticFollowSymlink",
+    description="""
+        Enable following symlinks when serving static files.
+        """,
+    default_val=False,
+    type_=bool,
+)
+
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of non-UI browser options.")

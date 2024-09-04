@@ -350,7 +350,10 @@ class Server:
                     (
                         make_url_path_regex(base, "app/static/(.*)"),
                         AppStaticFileHandler,
-                        {"path": file_util.get_app_static_dir(self.main_script_path)},
+                        {
+                            "path": file_util.get_app_static_dir(self.main_script_path),
+                            "follow_symlink": config.get_option("server.staticFollowSymlink"),
+                        },
                     ),
                 ]
             )

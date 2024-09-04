@@ -35,12 +35,16 @@ SAFE_APP_STATIC_FILE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif", ".webp")
 
 
 class AppStaticFileHandler(tornado.web.StaticFileHandler):
-    def initialize(self, path: str, default_filename: str | None = None) -> None:
+    def initialize(self, path: str, default_filename: str | None = None, follow_symlink: bool = False) -> None:
         super().initialize(path, default_filename)
         mimetypes.add_type("image/webp", ".webp")
+        self.follow_symlink = follow_symlink
 
     def validate_absolute_path(self, root: str, absolute_path: str) -> str | None:
-        full_path = os.path.realpath(absolute_path)
+        if self.follow_symlink:
+            full_path = os.path.abspath(absolute_path)
+        else:
+            full_path = os.path.realpath(absolute_path)
 
         ret_val = super().validate_absolute_path(root, absolute_path)
 
