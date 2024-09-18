@@ -30,12 +30,16 @@ from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.options_selector_utils import (
     convert_to_sequence_and_check_comparable,
     get_default_indices,
-    maybe_coerce_enum_sequence,
 )
-from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.policies import (
+    check_widget_policies,
+    maybe_raise_label_warnings,
+)
 from streamlit.elements.lib.utils import (
     Key,
+    LabelVisibility,
     compute_and_register_element_id,
+    get_label_visibility_proto_value,
     save_for_app_testing,
     to_key,
 )
@@ -122,16 +126,16 @@ def get_mapped_options(
         # reversing the index mapping to have thumbs up first (but still with the higher
         # index (=sentiment) in the list)
         options_indices = list(reversed(range(len(_THUMB_ICONS))))
-        options = [ButtonGroupProto.Option(content=icon) for icon in _THUMB_ICONS]
+        options = [ButtonGroupProto.Option(content_icon=icon) for icon in _THUMB_ICONS]
     elif feedback_option == "faces":
         options_indices = list(range(len(_FACES_ICONS)))
-        options = [ButtonGroupProto.Option(content=icon) for icon in _FACES_ICONS]
+        options = [ButtonGroupProto.Option(content_icon=icon) for icon in _FACES_ICONS]
     elif feedback_option == "stars":
         options_indices = list(range(_NUMBER_STARS))
         options = [
             ButtonGroupProto.Option(
-                content=_STAR_ICON,
-                selected_content=_SELECTED_STAR_ICON,
+                content_icon=_STAR_ICON,
+                selected_content_icon=_SELECTED_STAR_ICON,
             )
         ] * _NUMBER_STARS
 
@@ -148,6 +152,10 @@ def _build_proto(
     selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
         ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
     ),
+    style: Literal["segments", "pills", "borderless"] = "segments",
+    label: str | None = None,
+    label_visibility: LabelVisibility = "visible",
+    help: str | None = None,
 ) -> ButtonGroupProto:
     proto = ButtonGroupProto()
 
@@ -156,6 +164,15 @@ def _build_proto(
     proto.form_id = current_form_id
     proto.disabled = disabled
     proto.click_mode = click_mode
+    proto.style = ButtonGroupProto.Style.Value(style.upper())
+
+    if label is not None:
+        proto.label = label
+        proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+        if help is not None:
+            proto.help = help
 
     for formatted_option in formatted_options:
         proto.options.append(formatted_option)
@@ -163,40 +180,54 @@ def _build_proto(
     return proto
 
 
+def _maybe_raise_selection_mode_warning(selection_mode: str):
+    """Check if the selection_mode value is valid or raise exception otherwise."""
+    if selection_mode not in ["single", "multi"]:
+        raise StreamlitAPIException(
+            "The selection_mode argument must be one of ['single', 'multi']. "
+            f"The argument passed was '{selection_mode}'."
+        )
+
+
 class ButtonGroupMixin:
-    @overload  # These overloads are not documented in the docstring, at least not at this time, on the theory that most people won't know what it means. And the Literals here are a subclass of int anyway.
-    # Usually, we would make a type alias for Literal["thumbs", "faces", "stars"]; but, in this case, we don't use it in too many other places, and it's a more helpful autocomplete if we just enumerate the values explicitly, so a decision has been made to keep it as not an alias.
+    # These overloads are not documented in the docstring, at least not at this time, on
+    # the theory that most people won't know what it means. And the Literals here are a
+    # subclass of int anyway. Usually, we would make a type alias for
+    # Literal["thumbs", "faces", "stars"]; but, in this case, we don't use it in too
+    # many other places, and it's a more helpful autocomplete if we just enumerate the
+    # values explicitly, so a decision has been made to keep it as not an alias.
+    @overload
     def feedback(
         self,
         options: Literal["thumbs"] = ...,
         *,
-        key: str | None = None,
+        key: Key | None = None,
         disabled: bool = False,
         on_change: WidgetCallback | None = None,
-        args: Any | None = None,
-        kwargs: Any | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
     ) -> Literal[0, 1] | None: ...
     @overload
     def feedback(
         self,
         options: Literal["faces", "stars"] = ...,
         *,
-        key: str | None = None,
+        key: Key | None = None,
         disabled: bool = False,
         on_change: WidgetCallback | None = None,
-        args: Any | None = None,
-        kwargs: Any | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
     ) -> Literal[0, 1, 2, 3, 4] | None: ...
     @gather_metrics("feedback")
     def feedback(
         self,
         options: Literal["thumbs", "faces", "stars"] = "thumbs",
         *,
-        key: str | None = None,
+        key: Key | None = None,
         disabled: bool = False,
         on_change: WidgetCallback | None = None,
-        args: Any | None = None,
-        kwargs: Any | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
     ) -> int | None:
         """Display a feedback widget.
 
@@ -300,7 +331,7 @@ class ButtonGroupMixin:
             transformed_options,
             default=None,
             key=key,
-            click_mode=ButtonGroupProto.SINGLE_SELECT,
+            selection_mode="single",
             disabled=disabled,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
@@ -308,69 +339,156 @@ class ButtonGroupMixin:
             args=args,
             kwargs=kwargs,
             selection_visualization=selection_visualization,
+            style="borderless",
         )
         return sentiment.value
 
-    # Disable this more generic widget for now
+    @gather_metrics("pills")
+    def pills(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["single", "multi"] = "single",
+        icons: list[str | None] | None = None,
+        default: Sequence[V] | V | None = None,
+        format_func: Callable[[V], str] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ):
+        return self._internal_button_group(
+            options,
+            label=label,
+            selection_mode=selection_mode,
+            icons=icons,
+            default=default,
+            format_func=format_func,
+            key=key,
+            help=help,
+            style="pills",
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            label_visibility=label_visibility,
+        )
+
+    @gather_metrics("segments")
+    def segments(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["single", "multi"] = "single",
+        icons: list[str | None] | None = None,
+        default: Sequence[V] | V | None = None,
+        format_func: Callable[[V], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ):
+        return self._internal_button_group(
+            options,
+            label=label,
+            selection_mode=selection_mode,
+            icons=icons,
+            default=default,
+            format_func=format_func,
+            key=key,
+            help=help,
+            style="segments",
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            label_visibility=label_visibility,
+        )
+
+    # Disable this more generic widget for now and use as base function for pills and segments wrapper
     # @gather_metrics("button_group")
     def _internal_button_group(
         self,
         options: OptionSequence[V],
         *,
+        label: str | None = None,
+        selection_mode: Literal["single", "multi"] = "single",
+        icons: list[str | None] | None = None,
+        default: Sequence[V] | V | None = None,
+        format_func: Callable[[V], str] | None = None,
         key: Key | None = None,
-        default: Sequence[Any] | None = None,
-        click_mode: Literal["select", "multiselect"] = "select",
-        disabled: bool = False,
-        format_func: Callable[[V], dict[str, str]] | None = None,
+        help: str | None = None,
+        style: Literal["segments", "pills"] = "segments",
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-    ) -> list[V]:
-        def _transformed_format_func(x: V) -> ButtonGroupProto.Option:
-            if format_func is None:
-                return ButtonGroupProto.Option(content=str(x))
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> list[V] | V | None:
+        maybe_raise_label_warnings(label, label_visibility)
 
-            transformed = format_func(x)
+        def _transformed_format_func(
+            option: V,
+            icon: str | None = None,
+        ) -> ButtonGroupProto.Option:
+            if not format_func:
+                return ButtonGroupProto.Option(content=str(option), content_icon=icon)
+
+            transformed = format_func(option)
             return ButtonGroupProto.Option(
-                content=transformed["content"],
-                selected_content=transformed["selected_content"],
+                content=transformed,
+                content_icon=icon,
             )
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
-        serde = MultiSelectSerde(indexable_options, default_values)
 
+        serde = MultiSelectSerde(indexable_options, default_values)
         res = self._button_group(
             indexable_options,
-            key=key,
+            label=label,
+            selection_mode=selection_mode,
+            icons=icons,
             default=default_values,
-            click_mode=ButtonGroupProto.ClickMode.MULTI_SELECT
-            if click_mode == "multiselect"
-            else ButtonGroupProto.SINGLE_SELECT,
-            disabled=disabled,
             format_func=_transformed_format_func,
+            key=key,
+            help=help,
+            style=style,
+            on_change=on_change,
             serializer=serde.serialize,
             deserializer=serde.deserialize,
-            on_change=on_change,
             args=args,
             kwargs=kwargs,
-            after_register_callback=lambda widget_state: maybe_coerce_enum_sequence(
-                widget_state, options, indexable_options
-            ),
+            disabled=disabled,
+            label_visibility=label_visibility,
         )
-        return res.value
+
+        if selection_mode == "multi" and len(res.value) > 0:
+            return res.value
+
+        return (
+            res.value[0] if selection_mode == "single" and len(res.value) > 0 else None
+        )
 
     def _button_group(
         self,
         indexable_options: Sequence[Any],
         *,
         key: Key | None = None,
+        icons: list[str | None] | None = None,
         default: list[int] | None = None,
-        click_mode: ButtonGroupProto.ClickMode.ValueType = (
-            ButtonGroupProto.SINGLE_SELECT
-        ),
+        selection_mode: Literal["single", "multi"] = "single",
         disabled: bool = False,
-        format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
+        style: Literal["segments", "pills", "borderless"] = "segments",
+        format_func: Callable[[V, str | None], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T],
         serializer: WidgetSerializer[T],
         on_change: WidgetCallback | None = None,
@@ -379,14 +497,48 @@ class ButtonGroupMixin:
         selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
             ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
         ),
-        after_register_callback: Callable[
-            [RegisterWidgetResult[T]], RegisterWidgetResult[T]
-        ]
-        | None = None,
+        label: str | None = None,
+        label_visibility: LabelVisibility = "visible",
+        help: str | None = None,
     ) -> RegisterWidgetResult[T]:
+        _maybe_raise_selection_mode_warning(selection_mode)
+
+        parsed_selection_mode: ButtonGroupProto.ClickMode.ValueType = (
+            ButtonGroupProto.SINGLE_SELECT
+            if selection_mode == "single"
+            else ButtonGroupProto.MULTI_SELECT
+        )
+
+        # when selection mode is a single-value selection, the default must be a single
+        # value too.
+        if (
+            parsed_selection_mode == ButtonGroupProto.SINGLE_SELECT
+            and default is not None
+            and isinstance(default, Sequence)
+            and len(default) > 1
+        ):
+            raise StreamlitAPIException(
+                "The default argument to `st.button_group` must be a single value when "
+                "`selection_mode='single'`."
+            )
+
+        if style not in ["segments", "pills", "borderless"]:
+            raise StreamlitAPIException(
+                "The style argument must be one of ['segments', 'pills', 'borderless']. "
+                f"The argument passed was '{style}'."
+            )
+
         key = to_key(key)
 
-        check_widget_policies(self.dg, key, on_change, default_value=default)
+        _default = default
+        if default is not None and len(default) == 0:
+            _default = None
+
+        check_widget_policies(self.dg, key, on_change, default_value=_default)
+        if icons is not None and len(icons) != len(indexable_options):
+            raise StreamlitAPIException(
+                "The number of icons must match the number of options."
+            )
 
         widget_name = "button_group"
         ctx = get_script_run_ctx()
@@ -394,7 +546,10 @@ class ButtonGroupMixin:
         formatted_options = (
             indexable_options
             if format_func is None
-            else [format_func(option) for option in indexable_options]
+            else [
+                format_func(indexable_options[index], icons[index] if icons else None)
+                for index, _ in enumerate(indexable_options)
+            ]
         )
         element_id = compute_and_register_element_id(
             widget_name,
@@ -403,7 +558,8 @@ class ButtonGroupMixin:
             options=formatted_options,
             default=default,
             form_id=form_id,
-            click_mode=click_mode,
+            click_mode=parsed_selection_mode,
+            style=style,
             page=ctx.active_script_hash if ctx else None,
         )
 
@@ -413,8 +569,12 @@ class ButtonGroupMixin:
             default or [],
             disabled,
             form_id,
-            click_mode=click_mode,
+            click_mode=parsed_selection_mode,
             selection_visualization=selection_visualization,
+            style=style,
+            label=label,
+            label_visibility=label_visibility,
+            help=help,
         )
 
         widget_state = register_widget(
@@ -427,9 +587,6 @@ class ButtonGroupMixin:
             serializer=serializer,
             ctx=ctx,
         )
-
-        if after_register_callback is not None:
-            widget_state = after_register_callback(widget_state)
 
         if widget_state.value_changed:
             proto.value[:] = serializer(widget_state.value)

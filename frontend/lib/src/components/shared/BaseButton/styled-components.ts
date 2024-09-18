@@ -35,6 +35,10 @@ export enum BaseButtonKind {
   HEADER_BUTTON = "header",
   HEADER_NO_PADDING = "headerNoPadding",
   ELEMENT_TOOLBAR = "elementToolbar",
+  PILLS = "pills",
+  PILLS_ACTIVE = "pillsActive",
+  SEGMENTS = "segments",
+  SEGMENTS_ACTIVE = "segmentsActive",
 }
 
 export enum BaseButtonSize {
@@ -251,6 +255,104 @@ export const StyledIconButton = styled(
       backgroundColor: theme.colors.lightGray,
       borderColor: theme.colors.transparent,
       color: theme.colors.gray,
+    },
+  }
+})
+
+const StyledButtonGroupBaseButton = styled(
+  StyledBaseButton
+)<RequiredBaseButtonProps>(({ theme }) => {
+  return {
+    background: theme.colors.bgColor,
+    color: theme.colors.text,
+    border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+    fontSize: theme.fontSizes.sm,
+    lineHeight: theme.lineHeights.base,
+    fontWeight: theme.fontWeights.normal,
+    height: theme.sizes.largeLogoHeight,
+    minHeight: theme.sizes.largeLogoHeight,
+    maxWidth: theme.sizes.contentMaxWidth,
+
+    // show pills with long text in single line and use ellipsis for overflow
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+
+    "&:hover": {
+      borderColor: theme.colors.primary,
+      color: theme.colors.primary,
+    },
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      color: theme.colors.fadedText20,
+      borderColor: theme.colors.fadedText20,
+    },
+
+    "& div": {
+      textOverflow: "ellipsis",
+      overflow: "hidden",
+    },
+    "& p": {
+      fontSize: theme.fontSizes.sm,
+      textOverflow: "ellipsis",
+      overflow: "hidden",
+    },
+  }
+})
+
+export const StyledPillsButton = styled(
+  StyledButtonGroupBaseButton
+)<RequiredBaseButtonProps>(({ theme }) => {
+  return {
+    borderRadius: theme.radii.xxxl,
+    padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
+    gap: theme.spacing.xs,
+  }
+})
+
+export const StyledPillsButtonActive = styled(
+  StyledPillsButton
+)<RequiredBaseButtonProps>(({ theme }) => {
+  return {
+    backgroundColor: transparentize(theme.colors.primary, 0.9),
+    borderColor: theme.colors.primary,
+    color: theme.colors.primary,
+    "&:hover": {
+      backgroundColor: transparentize(theme.colors.primary, 0.8),
+      borderColor: theme.colors.primary,
+      color: theme.colors.primary,
+    },
+  }
+})
+
+export const StyledSegmentsButton = styled(
+  StyledButtonGroupBaseButton
+)<RequiredBaseButtonProps>(({ theme }) => {
+  return {
+    padding: `${theme.spacing.twoXS} ${theme.spacing.lg}`,
+    borderRadius: theme.radii.none,
+
+    "&:first-child": {
+      borderTopLeftRadius: theme.radii.default,
+      borderBottomLeftRadius: theme.radii.default,
+    },
+    "&:last-child": {
+      borderTopRightRadius: theme.radii.default,
+      borderBottomRightRadius: theme.radii.default,
+    },
+  }
+})
+
+export const StyledSegmentsButtonActive = styled(
+  StyledSegmentsButton
+)<RequiredBaseButtonProps>(({ theme }) => {
+  return {
+    backgroundColor: transparentize(theme.colors.primary, 0.9),
+    borderColor: theme.colors.primary,
+    color: theme.colors.primary,
+    "&:hover": {
+      backgroundColor: transparentize(theme.colors.primary, 0.8),
+      borderColor: theme.colors.primary,
+      color: theme.colors.primary,
     },
   }
 })
