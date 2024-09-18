@@ -173,7 +173,7 @@ describe("NumberInput widget", () => {
     expect(numberInput).toHaveAttribute("max", "10")
   })
 
-  it("resets its value when form is cleared", () => {
+  it("resets its value when form is cleared", async () => {
     // Create a widget in a clearOnSubmit form
     const props = getIntProps({ formId: "form", default: 10 })
     props.widgetMgr.setFormClearOnSubmit("form", true)
@@ -188,7 +188,7 @@ describe("NumberInput widget", () => {
     })
 
     // "Submit" the form
-    act(() => {
+    await act(() => {
       props.widgetMgr.submitForm("form", undefined)
     })
 

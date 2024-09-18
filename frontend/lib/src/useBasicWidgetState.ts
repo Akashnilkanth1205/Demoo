@@ -29,20 +29,19 @@ import {
 import { useFormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
-export type ValueWSource<T> = {
+export type ValueWithSource<T> = {
   value: T
 } & Source
 
-// Interface for a proto that has a .value, .setValue, and .formId
-interface ValueElementProtoInterface<T> {
-  value?: T
+// Interface for a proto that has a .setValue, and .formId
+interface ValueElementProtoInterface {
   setValue: boolean
   formId: string
 }
 
-export interface UseValueWSourceArgs<
+export interface UseBasicWidgetStateArgs<
   T, // Type of the value stored in WidgetStateManager.
-  P extends ValueElementProtoInterface<T> // Proto for this widget.
+  P extends ValueElementProtoInterface // Proto for this widget.
 > {
   // Important: these callback functions need to have stable references! So
   // either declare them at the module level or wrap in useCallback.
@@ -52,7 +51,7 @@ export interface UseValueWSourceArgs<
   updateWidgetMgrState: (
     el: P,
     wm: WidgetStateManager,
-    vws: ValueWSource<T>,
+    vws: ValueWithSource<T>,
     fragmentId?: string
   ) => void
   element: P
@@ -66,7 +65,7 @@ export interface UseValueWSourceArgs<
  */
 export function useBasicWidgetState<
   T, // Type of the value stored in WidgetStateManager.
-  P extends ValueElementProtoInterface<T> // Proto for this widget.
+  P extends ValueElementProtoInterface // Proto for this widget.
 >({
   // Important: these callback functions need to have stable references! So
   // either declare them at the module level or wrap in useCallback.
@@ -77,9 +76,9 @@ export function useBasicWidgetState<
   element,
   widgetMgr,
   fragmentId,
-}: UseValueWSourceArgs<T, P>): [
+}: UseBasicWidgetStateArgs<T, P>): [
   T,
-  Dispatch<SetStateAction<ValueWSource<T> | null>>
+  Dispatch<SetStateAction<ValueWithSource<T> | null>>
 ] {
   const [currentValue, setCurrentValue] = useState<T>(() => {
     // If WidgetStateManager knew a value for this widget, initialize to that.
@@ -93,23 +92,29 @@ export function useBasicWidgetState<
   // This acts as an "event":
   // - It's null most of the time
   // - It only has a value the moment when the user calls setValue (internally
-  //   called setNextValueWSource). And then it's immediately set to null
+  //   called setNextValueWithSource). And then it's immediately set to null
   //   internally.
-  const [nextValueWSource, setNextValueWSource] =
-    useState<ValueWSource<T> | null>({
+  const [nextValueWithSource, setNextValueWithSource] =
+    useState<ValueWithSource<T> | null>({
       value: currentValue,
       fromUi: false,
     })
 
-  // When someone calls setNextValueWSource, update internal state and tell
+  // When someone calls setNextValueWithSource, update internal state and tell
   // widget manager to update its state too.
   useEffect(() => {
-    if (isNullOrUndefined(nextValueWSource)) return
-    setNextValueWSource(null) // Clear "event".
+    if (isNullOrUndefined(nextValueWithSource)) return
+    setNextValueWithSource(null) // Clear "event".
 
-    setCurrentValue(nextValueWSource.value)
-    updateWidgetMgrState(element, widgetMgr, nextValueWSource, fragmentId)
-  }, [nextValueWSource, updateWidgetMgrState, element, widgetMgr, fragmentId])
+    setCurrentValue(nextValueWithSource.value)
+    updateWidgetMgrState(element, widgetMgr, nextValueWithSource, fragmentId)
+  }, [
+    nextValueWithSource,
+    updateWidgetMgrState,
+    element,
+    widgetMgr,
+    fragmentId,
+  ])
 
   // Respond to value changes via session_state. This is also set via an
   // "event", this time using the .setValue property of the proto.
@@ -117,7 +122,7 @@ export function useBasicWidgetState<
     if (!element.setValue) return
     element.setValue = false // Clear "event".
 
-    setNextValueWSource({
+    setNextValueWithSource({
       value: getCurrStateFromProto(element),
       fromUi: false,
     })
@@ -128,14 +133,14 @@ export function useBasicWidgetState<
    * form is submitted. Restore our default value and update the WidgetManager.
    */
   const onFormCleared = useCallback((): void => {
-    setNextValueWSource({
+    setNextValueWithSource({
       value: getDefaultStateFromProto(element),
       fromUi: true,
     })
-  }, [setNextValueWSource, element, getDefaultStateFromProto])
+  }, [setNextValueWithSource, element, getDefaultStateFromProto])
 
   // Manage our form-clear event handler.
   useFormClearHelper({ widgetMgr, element, onFormCleared })
 
-  return [currentValue, setNextValueWSource]
+  return [currentValue, setNextValueWithSource]
 }
