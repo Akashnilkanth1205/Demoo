@@ -67,6 +67,7 @@ export function calculateMaxHeight(numRows: number): number {
  *
  * @param element - The ArrowProto element
  * @param numRows - The number of rows in the table
+ * @param usesGroupRow - Whether the table uses a group row to display multiple column headers.
  * @param containerWidth - The width of the surrounding container
  * @param containerHeight - The height of the surrounding container
  * @param isFullScreen - Whether the table is in fullscreen mode
@@ -76,6 +77,7 @@ export function calculateMaxHeight(numRows: number): number {
 function useTableSizer(
   element: ArrowProto,
   numRows: number,
+  usesGroupRow: boolean,
   containerWidth: number,
   containerHeight?: number,
   isFullScreen?: boolean
@@ -83,7 +85,7 @@ function useTableSizer(
   // Calculate the maximum height of the table based on the number of rows:
   let maxHeight = calculateMaxHeight(
     numRows +
-      1 + // Column header row
+      (usesGroupRow ? 2 : 1) + // Group row + column header row
       (element.editingMode === ArrowProto.EditingMode.DYNAMIC ? 1 : 0) // Trailing row
   )
 
