@@ -52,7 +52,7 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[Mapping[ElementType, ValueFieldName]] = (
             "button_group": "int_array_value",
             "camera_input": "file_uploader_state_value",
             "checkbox": "bool_value",
-            "chat_input": "string_trigger_value",
+            "chat_input": "chat_input_value",
             "color_picker": "string_value",
             "component_instance": "json_value",
             "data_editor": "string_value",
