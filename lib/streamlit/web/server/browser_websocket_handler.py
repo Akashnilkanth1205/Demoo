@@ -107,6 +107,20 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             "email": None if is_public_cloud_app else email
         }
 
+        raw_cookie_value = self.get_signed_cookie("_streamlit_uzer")
+        if self.get_signed_cookie("_streamlit_uzer", None):
+            if raw_cookie_value:
+                cookie_value = json.loads(raw_cookie_value)
+
+                user_info["email"] = cookie_value.get("email", email)
+                if not cookie_value.get("email", None) and cookie_value.get(
+                    "access_token"
+                ):
+                    user_info["access_token"] = cookie_value.get("access_token")
+                    user_info["provider"] = cookie_value.get("provider")
+
+                user_info["userinfo"] = cookie_value
+
         existing_session_id = None
         try:
             ws_protocols = [
