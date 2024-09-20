@@ -145,6 +145,7 @@ interface State {
   userSettings: UserSettings
   dialog?: DialogProps | null
   layout: PageConfig.Layout
+  pageLayouts: Record<string, PageConfig.Layout>
   initialSidebarState: PageConfig.SidebarState
   menuItems?: PageConfig.IMenuItems | null
   allowRunOnSave: boolean
@@ -275,6 +276,7 @@ export class App extends PureComponent<Props, State> {
         runOnSave: false,
       },
       layout: PageConfig.Layout.CENTERED,
+      pageLayouts: {},
       initialSidebarState: PageConfig.SidebarState.AUTO,
       menuItems: undefined,
       allowRunOnSave: true,
@@ -1450,6 +1452,26 @@ export class App extends PureComponent<Props, State> {
         .map(element => getElementId(element))
         .filter(notUndefined)
     )
+
+    // Set new page layout before rerun
+    // 1. Use previously saved layout if exists, otherwise default to CENTERED
+    // 2. This forces pages without set_page_config(layout=...) to correctly reset to default
+    // 3. Pages using set_page_config(layout=...) will be overriding these values
+    this.setState((prevState: State) => {
+      const pageLayouts = prevState.pageLayouts
+      pageLayouts[prevState.currentPageScriptHash] = prevState.layout
+      const newLayout =
+        pageLayouts[pageScriptHash] ?? PageConfig.Layout.CENTERED
+      console.log("Backup page layout", prevState.pageLayouts)
+      return {
+        layout: newLayout,
+        pageLayouts: pageLayouts,
+        userSettings: {
+          ...prevState.userSettings,
+          wideMode: newLayout === PageConfig.Layout.WIDE,
+        },
+      }
+    })
 
     this.sendRerunBackMsg(
       this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
