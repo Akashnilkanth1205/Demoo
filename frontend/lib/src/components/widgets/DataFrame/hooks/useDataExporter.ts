@@ -25,8 +25,8 @@ import {
 import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { logError, logWarning } from "@streamlit/lib/src/util/log"
 
-// Delimiter between cells
-const CSV_DELIMITER = ","
+// Delimiter between cells based on the detected locale
+const CSV_DELIMITER = ['', ''].toLocaleString()
 // Quote character for cell values containing special characters
 const CSV_QUOTE_CHAR = '"'
 // The character used to escape the quote character within a cell
