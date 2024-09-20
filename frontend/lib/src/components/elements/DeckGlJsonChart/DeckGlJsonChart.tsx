@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import React, { FC, useEffect, useState } from "react"
+import React, { FC, useCallback, useEffect, useState } from "react"
 
 import { DeckGL } from "@deck.gl/react/typed"
 import { MapContext, NavigationControl, StaticMap } from "react-map-gl"
 import { CSVLoader } from "@loaders.gl/csv"
 import { GLTFLoader } from "@loaders.gl/gltf"
 import { registerLoaders } from "@loaders.gl/core"
-import { LayersList } from "@deck.gl/core/typed"
+import { LayersList, PickingInfo } from "@deck.gl/core/typed"
 import { useTheme } from "@emotion/react"
 
 import {
@@ -30,13 +30,15 @@ import {
 } from "@streamlit/lib/src/theme"
 import Toolbar from "@streamlit/lib/src/components/shared/Toolbar"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
+import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
+import { assertNever } from "@streamlit/lib/src/util/assertNever"
 
 import withMapboxToken from "./withMapboxToken"
 import {
   StyledDeckGlChart,
   StyledNavigationControlContainer,
 } from "./styled-components"
-import type { PropsWithHeight } from "./types"
+import type { DeckGlElementState, DeckGLProps } from "./types"
 import { useDeckGl } from "./useDeckGl"
 
 import "mapbox-gl/dist/mapbox-gl.css"
@@ -45,26 +47,41 @@ registerLoaders([CSVLoader, GLTFLoader])
 
 const EMPTY_LAYERS: LayersList = []
 
-export const DeckGlJsonChart: FC<PropsWithHeight> = props => {
+export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   const {
     collapse,
+    disabled,
     disableFullscreenMode,
     element,
     expand,
+    fragmentId,
     height: propsHeight,
     isFullScreen,
+    mapboxToken: propsMapboxToken,
+    widgetMgr,
     width: propsWidth,
   } = props
+  const { selectionMode, mapboxToken: elementMapboxToken } = element
   const theme: EmotionTheme = useTheme()
-
-  const { createTooltip, deck, onViewStateChange, viewState, width, height } =
-    useDeckGl({
-      element,
-      isLightTheme: hasLightBackgroundColor(theme),
-      width: propsWidth,
-      height: propsHeight,
-      isFullScreen,
-    })
+  const {
+    createTooltip,
+    data: selection,
+    deck,
+    height,
+    onViewStateChange,
+    setSelection,
+    viewState,
+    width,
+  } = useDeckGl({
+    element,
+    fragmentId,
+    height: propsHeight,
+    isFullScreen,
+    isLightTheme: hasLightBackgroundColor(theme),
+    theme,
+    widgetMgr,
+    width: propsWidth,
+  })
 
   const [isInitialized, setIsInitialized] = useState(false)
 
@@ -74,6 +91,107 @@ export const DeckGlJsonChart: FC<PropsWithHeight> = props => {
     // script got re-executed.
     setIsInitialized(true)
   }, [])
+
+  const handleClick = useCallback(
+    (info: PickingInfo) => {
+      if (disabled) {
+        return
+      }
+
+      const { index, object } = info
+
+      const layerId = `${info.layer?.id || null}`
+      const currState = selection
+      /** true if a user clicked outside of any layer */
+      const isResetClick = index === -1
+
+      const getSelection = (): DeckGlElementState["selection"] => {
+        if (isResetClick) {
+          return {
+            indices: {},
+            objects: {},
+          }
+        }
+
+        switch (selectionMode) {
+          case DeckGlJsonChartProto.SelectionMode.IGNORE:
+            return {
+              indices: {},
+              objects: {},
+            }
+          case DeckGlJsonChartProto.SelectionMode.SINGLE: {
+            if (currState.selection.indices[layerId]?.[0] === index) {
+              // Unselect the index
+              return {
+                indices: {},
+                objects: {},
+              }
+            }
+
+            return {
+              indices: { [`${layerId}`]: [index] },
+              objects: { [`${layerId}`]: [object] },
+            }
+          }
+          case DeckGlJsonChartProto.SelectionMode.MULTI: {
+            const selectionMap: Map<number, unknown> = new Map(
+              ((): [number, unknown][] => {
+                const indices = currState?.selection?.indices?.[layerId] || []
+
+                return indices.map((index, i) => [
+                  index,
+                  currState.selection?.objects?.[layerId]?.[i],
+                ])
+              })()
+            )
+
+            if (selectionMap.has(index)) {
+              // Unselect an existing index
+              selectionMap.delete(index)
+            } else {
+              // Add the newly selected index
+              selectionMap.set(index, object)
+            }
+
+            if (selectionMap.size === 0) {
+              // If the layer has nothing selected, remove the layer from the returned value
+              // eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-unused-vars
+              const { [layerId]: _, ...restIndices } =
+                currState.selection.indices
+              // eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-unused-vars
+              const { [layerId]: __, ...restObjects } =
+                currState.selection.objects
+
+              return {
+                indices: restIndices,
+                objects: restObjects,
+              }
+            }
+
+            return {
+              indices: {
+                ...currState.selection.indices,
+                [`${layerId}`]: Array.from(selectionMap.keys()),
+              },
+              objects: {
+                ...currState.selection.objects,
+                [`${layerId}`]: Array.from(selectionMap.values()),
+              },
+            }
+          }
+          default:
+            assertNever(selectionMode)
+            throw new Error("Invalid selection mode")
+        }
+      }
+
+      setSelection({
+        fromUi: true,
+        value: { selection: getSelection() },
+      })
+    },
+    [disabled, selectionMode, selection, setSelection]
+  )
 
   return (
     <StyledDeckGlChart
@@ -99,6 +217,7 @@ export const DeckGlJsonChart: FC<PropsWithHeight> = props => {
         // @ts-expect-error There is a type mismatch due to our versions of the libraries
         ContextProvider={MapContext.Provider}
         controller
+        onClick={typeof selectionMode === "number" ? handleClick : undefined}
       >
         <StaticMap
           height={height}
@@ -109,7 +228,7 @@ export const DeckGlJsonChart: FC<PropsWithHeight> = props => {
               ? deck.mapStyle
               : deck.mapStyle[0])
           }
-          mapboxApiAccessToken={props.element.mapboxToken || props.mapboxToken}
+          mapboxApiAccessToken={elementMapboxToken || propsMapboxToken}
         />
         <StyledNavigationControlContainer>
           <NavigationControl

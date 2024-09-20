@@ -15,11 +15,32 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Dict, Final, Mapping, cast
+from dataclasses import dataclass
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Final,
+    Literal,
+    Mapping,
+    TypedDict,
+    cast,
+    overload,
+)
 
 from streamlit import config
+from streamlit.elements.lib.event_utils import AttributeDictionary
+from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.state import (
+    WidgetCallback,
+    register_widget,
+)
 
 if TYPE_CHECKING:
     from pydeck import Deck
@@ -33,15 +54,98 @@ EMPTY_MAP: Final[Mapping[str, Any]] = {
 }
 
 
+class LayerSelectionState(TypedDict, total=False):
+    """
+    The schema for the PyDeck Layer Selection State
+
+    Attributes
+    ----------
+    indices : dict[str, list[int]]
+        Dictionary where keys are the layer id and values are lists of indices
+        of selected objects.
+    objects : dict[str, list[dict[str, Any]]]
+        Dictionary where keys are the layer id and values are lists of metadata
+        objects for the selected items.
+    """
+
+    indices: dict[str, list[int]]
+    objects: dict[str, list[dict[str, Any]]]
+
+
+class PydeckState(TypedDict, total=False):
+    """
+    The schema for the PyDeck State
+
+    Attributes
+    ----------
+    selection : LayerSelectionState
+        The selection state of the PyDeck layers.
+    """
+
+    selection: LayerSelectionState
+
+
+@dataclass
+class PydeckSelectionSerde:
+    """PydeckSelectionSerde is used to serialize and deserialize the Pydeck selection state."""
+
+    def deserialize(self, ui_value: str | None, widget_id: str = "") -> PydeckState:
+        empty_selection_state: PydeckState = {
+            "selection": {
+                "indices": {},
+                "objects": {},
+            }
+        }
+
+        selection_state = (
+            empty_selection_state
+            if ui_value is None
+            else cast(PydeckState, AttributeDictionary(json.loads(ui_value)))
+        )
+
+        return selection_state
+
+    def serialize(self, selection_state: PydeckState) -> str:
+        return json.dumps(selection_state, default=str)
+
+
 class PydeckMixin:
+    @overload
+    def pydeck_chart(
+        self,
+        pydeck_obj: Deck | None = None,
+        use_container_width: bool = False,
+        *,
+        selection_mode: Literal[
+            "ignore"
+        ],  # No default value here to make it work with mypy
+        on_select: Literal["ignore"],  # No default value here to make it work with mypy
+        key: Key | None = None,
+    ) -> DeltaGenerator: ...
+
+    @overload
+    def pydeck_chart(
+        self,
+        pydeck_obj: Deck | None = None,
+        use_container_width: bool = False,
+        *,
+        selection_mode: Literal["single", "multi"] = "single",
+        on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        key: Key | None = None,
+    ) -> PydeckState: ...
+
     @gather_metrics("pydeck_chart")
     def pydeck_chart(
         self,
         pydeck_obj: Deck | None = None,
         use_container_width: bool = False,
+        *,
         width: int | None = None,
         height: int | None = None,
-    ) -> DeltaGenerator:
+        selection_mode: Literal["single", "multi", "ignore"] = "ignore",
+        on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
+        key: Key | None = None,
+    ) -> DeltaGenerator | PydeckState:
         """Draw a chart using the PyDeck library.
 
         This supports 3D maps, point clouds, and more! More info about PyDeck
@@ -149,9 +253,87 @@ class PydeckMixin:
 
         """
         pydeck_proto = PydeckProto()
-        marshall(
-            pydeck_proto, pydeck_obj, use_container_width, width=width, height=height
-        )
+
+        ctx = get_script_run_ctx()
+
+        if pydeck_obj is None:
+            spec = json.dumps(EMPTY_MAP)
+        else:
+            spec = pydeck_obj.to_json()
+
+        pydeck_proto.json = spec
+        pydeck_proto.use_container_width = use_container_width
+
+        if width:
+            pydeck_proto.width = width
+        if height:
+            pydeck_proto.height = height
+
+        tooltip = _get_pydeck_tooltip(pydeck_obj)
+        if tooltip:
+            pydeck_proto.tooltip = json.dumps(tooltip)
+
+        mapbox_token = config.get_option("mapbox.token")
+        if mapbox_token:
+            pydeck_proto.mapbox_token = mapbox_token
+
+        key = to_key(key)
+        is_selection_activated = on_select != "ignore"
+
+        if on_select not in ["ignore", "rerun"] and not callable(on_select):
+            raise StreamlitAPIException(
+                f"You have passed {on_select} to `on_select`. But only 'ignore', 'rerun', or a callable is supported."
+            )
+
+        if is_selection_activated:
+            # Selections are activated, treat Pydeck as a widget:
+            # Ensure we are defaulting to single selection mode if the user
+            # hasn't defined it, but has activating selections.
+            selection_mode = "single" if selection_mode == "ignore" else selection_mode
+
+            # Run some checks that are only relevant when selections are activated
+            is_callback = callable(on_select)
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=cast(WidgetCallback, on_select) if is_callback else None,
+                default_value=None,
+                writes_allowed=False,
+                enable_check_callback_rules=is_callback,
+            )
+            pydeck_proto.form_id = current_form_id(self.dg)
+
+            pydeck_proto.id = compute_and_register_element_id(
+                "deck_gl_json_chart",
+                user_key=key,
+                key=key,
+                is_selection_activated=is_selection_activated,
+                selection_mode=selection_mode,
+                use_container_width=use_container_width,
+                page=ctx.active_script_hash if ctx else None,
+                spec=spec,
+                form_id=pydeck_proto.form_id,
+            )
+
+            pydeck_proto.selection_mode = cast(
+                PydeckProto.SelectionMode.ValueType, selection_mode.upper()
+            )
+
+            serde = PydeckSelectionSerde()
+
+            widget_state = register_widget(
+                "deck_gl_json_chart",
+                pydeck_proto,
+                ctx=ctx,
+                deserializer=serde.deserialize,
+                on_change_handler=on_select if callable(on_select) else None,
+                serializer=serde.serialize,
+            )
+
+            self.dg._enqueue("deck_gl_json_chart", pydeck_proto)
+
+            return cast(PydeckState, widget_state.value)
+
         return self.dg._enqueue("deck_gl_json_chart", pydeck_proto)
 
     @property
@@ -176,34 +358,3 @@ def _get_pydeck_tooltip(pydeck_obj: Deck | None) -> dict[str, str] | None:
         return cast(Dict[str, str], tooltip)
 
     return None
-
-
-def marshall(
-    pydeck_proto: PydeckProto,
-    pydeck_obj: Deck | None,
-    use_container_width: bool,
-    width: int | None = None,
-    height: int | None = None,
-) -> None:
-    if pydeck_obj is None:
-        spec = json.dumps(EMPTY_MAP)
-    else:
-        spec = pydeck_obj.to_json()
-
-    pydeck_proto.json = spec
-    pydeck_proto.use_container_width = use_container_width
-
-    if width:
-        pydeck_proto.width = width
-    if height:
-        pydeck_proto.height = height
-
-    pydeck_proto.id = ""
-
-    tooltip = _get_pydeck_tooltip(pydeck_obj)
-    if tooltip:
-        pydeck_proto.tooltip = json.dumps(tooltip)
-
-    mapbox_token = config.get_option("mapbox.token")
-    if mapbox_token:
-        pydeck_proto.mapbox_token = mapbox_token
